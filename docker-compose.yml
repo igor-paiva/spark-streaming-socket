@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  submit:
+    build:
+      context: ./submit
+    volumes:
+      - ./submit:/submit
+      - ./spark-3.1.3-bin-hadoop3.2:/submit/spark-3.1.3-bin-hadoop3.2
+    depends_on:
+      - master
+      - socket
+      - spark-worker-1
+      - spark-worker-2
+    environment:
+      - SPARK_LOCAL_IP=localhost
+      - PYSPARK_DRIVER_PYTHON=python3
+      - PYSPARK_PYTHON=python3
+    networks:
+      - spark-socket-cluster
+
+  socket:
+    build:
+      context: ./socket
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./socket:/code
+    networks:
+      - spark-socket-cluster
+
+  master:
+    build:
+      context: ./master
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./spark-3.1.3-bin-hadoop3.2:/master/spark-3.1.3-bin-hadoop3.2
+    networks:
+      - spark-socket-cluster
+
+  spark-worker-1:
+    build:
+      context: ./worker
+    volumes:
+      - ./spark-3.1.3-bin-hadoop3.2:/worker/spark-3.1.3-bin-hadoop3.2
+    environment:
+      - SPARK_MASTER_URL=spark://master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    depends_on:
+      - master
+    ports:
+      - '8081:8081'
+    networks:
+      - spark-socket-cluster
+
+  spark-worker-2:
+    build:
+      context: ./worker
+    volumes:
+      - ./spark-3.1.3-bin-hadoop3.2:/worker/spark-3.1.3-bin-hadoop3.2
+    environment:
+      - SPARK_MASTER_URL=spark://master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    depends_on:
+      - master
+    ports:
+      - '8082:8081'
+    networks:
+      - spark-socket-cluster
+
+networks:
+  spark-socket-cluster:
+    external: true
